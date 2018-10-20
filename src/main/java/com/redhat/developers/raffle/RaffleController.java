@@ -19,6 +19,8 @@ import java.util.stream.Collectors;
 @RestController
 public class RaffleController {
 
+    private static final int MAX_SIZE = 150;
+
     private final Twitter twitter = new TwitterFactory().getInstance();
 
     @GetMapping(value = "/{csvHashtags}/{csvUsernames}")
@@ -27,14 +29,16 @@ public class RaffleController {
         return queryResult.getTweets().stream()
                 .map(s -> RaffleResponse.of(s.getUser().getScreenName(), s.getId()))
                 .distinct()
-                .limit(limit)
+                .limit(MAX_SIZE)
                 .collect(Collectors.collectingAndThen(
                         Collectors.toCollection(ArrayList::new),
                         list -> {
                             Collections.shuffle(list);
-                            return list;
+                            return list.stream();
                         }
-                ));
+                ))
+                .limit(limit)
+                .collect(Collectors.toList());
     }
 
     @GetMapping(value = "/{csvHashtags}")
@@ -43,14 +47,16 @@ public class RaffleController {
         return queryResult.getTweets().stream()
                 .map(s -> RaffleResponse.of(s.getUser().getScreenName(), s.getId()))
                 .distinct()
-                .limit(limit)
+                .limit(MAX_SIZE)
                 .collect(Collectors.collectingAndThen(
                         Collectors.toCollection(ArrayList::new),
                         list -> {
                             Collections.shuffle(list);
-                            return list;
+                            return list.stream();
                         }
-                ));
+                ))
+                .limit(limit)
+                .collect(Collectors.toList());
     }
 
     private boolean checkIfUserIsFollowerOf(String source, String target) {
@@ -62,7 +68,7 @@ public class RaffleController {
     }
 
     @GetMapping(value = "/", produces = MediaType.TEXT_PLAIN_VALUE)
-    public String rootMessage(){
+    public String rootMessage() {
         return "Usage:" +
                 "\n" +
                 "/{hashtags}: You can provide a comma-separated list of hashtags to filter" +
