@@ -10,6 +10,9 @@ import twitter4j.Twitter;
 import twitter4j.TwitterException;
 import twitter4j.TwitterFactory;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,9 +27,13 @@ public class RaffleController {
     private final Twitter twitter = new TwitterFactory().getInstance();
 
     @GetMapping(value = "/{csvHashtags}/{csvUsernames}")
-    public List<RaffleResponse> hashtagsAndUsernames(@PathVariable("csvUsernames") String[] csvUsernames, @PathVariable("csvHashtags") String[] csvHashtags, @RequestParam(value = "limit", required = false, defaultValue = "20") int limit) throws Exception {
+    public List<RaffleResponse> hashtagsAndUsernames(@PathVariable("csvUsernames") String[] csvUsernames,
+                                                     @PathVariable("csvHashtags") String[] csvHashtags,
+                                                     @RequestParam(value = "limit", required = false, defaultValue = "20") int limit,
+                                                     @RequestParam(value = "period", required = false, defaultValue = "180") int period) throws Exception {
         QueryResult queryResult = twitter.search(QueryBuilder.of(csvUsernames).addHashtags(csvHashtags).build());
         return queryResult.getTweets().stream()
+                .filter(s -> s.getCreatedAt().toInstant().isAfter(Instant.now().minus(period, ChronoUnit.MINUTES)))
                 .map(s -> RaffleResponse.of(s.getUser().getScreenName(), s.getId()))
                 .distinct()
                 .limit(MAX_SIZE)
@@ -42,9 +49,12 @@ public class RaffleController {
     }
 
     @GetMapping(value = "/{csvHashtags}")
-    public List<RaffleResponse> hashtags(@PathVariable("csvHashtags") String[] csvHashtags, @RequestParam(value = "limit", required = false, defaultValue = "20") int limit) throws Exception {
+    public List<RaffleResponse> hashtags(@PathVariable("csvHashtags") String[] csvHashtags,
+                                         @RequestParam(value = "limit", required = false, defaultValue = "20") int limit,
+                                         @RequestParam(value = "period", required = false, defaultValue = "180") int period) throws Exception {
         QueryResult queryResult = twitter.search(QueryBuilder.of().addHashtags(csvHashtags).build());
         return queryResult.getTweets().stream()
+                .filter(s -> s.getCreatedAt().toInstant().isAfter(Instant.now().minus(period, ChronoUnit.MINUTES)))
                 .map(s -> RaffleResponse.of(s.getUser().getScreenName(), s.getId()))
                 .distinct()
                 .limit(MAX_SIZE)
@@ -75,7 +85,9 @@ public class RaffleController {
                 "\n" +
                 "/{hashtags}/{usernames}: You can provide a comma-separated list of hashtags *AND* a comma-separated list of usernames to filter" +
                 "\n" +
-                "You can also add the 'limit' request parameter to limit the results. Example: ?limit=1 will give you only the 1st result";
+                "You can add the 'limit' request parameter to limit the results. Example: ?limit=1 will give you only the 1st result" +
+                "\n" +
+                "You can also add the 'period' request parameter to filter by period. Example: ?period=45 will give you only the results of the last 45 minutes";
     }
 
 }
